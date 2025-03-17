@@ -33,18 +33,17 @@ Our approach leverages Vision-Language Models (VLMs) to interpret the visual sce
 
 ### Offline Dataset
 
-### Video
-
 <div align="center">
-  <video width="80%" controls>
-    <source src="videos/LaC_video.mp4" type="video/mp4">
-  </video>
+  <a href="videos/LaC_video.mp4">
+    <img src="images/LaC_video.gif" width="100%" alt="Demo Video Thumbnail">
+  </a>
 </div>
 
-*Demo Video: Real-time generated Gaussian map using the proposed methodology. Potential risks are inferred from each image without direct experience, and an anxiety score is pre-computed using a VLM to update the cost of the map. The anxiety score determines how much the robot should avoid certain areas during navigation.*
+*Real-time generated Gaussian map using the proposed methodology. Potential risks are inferred from each image without direct experience, and an anxiety score is pre-computed using a VLM to update the cost of the map. The anxiety score determines how much the robot should avoid certain areas during navigation.*
 
 ![Real-World Offline Data Map Building](images/ex.png)
 *Fig. 3: Real-World Offline Data Map Building. The first row displays the RGB images from the robot's perspective. The second row visualizes the cost map corresponding to the same viewpoint as the first row. The third row presents the bird's-eye view (BEV) of the Gaussian map being generated in real-time. (a) represents the cost visualization of the potential hazard associated with a door in the indoor environment. (b) shows the cost representation of the potential hazard when a person is seated on a chair in the indoor environment. (c) illustrates the cost representation of the potential hazard on a snowy surface.*
+
 Our approach successfully identifies potential hazards and generates appropriate cost maps to guide robot navigation.
 
 
