@@ -1,6 +1,6 @@
 # Language as Cost: Proactive Hazard Mapping using VLM for Robot Navigation
 
-[![Conference](https://img.shields.io/badge/Submitted%20to-IROS%202025-blue)](http://iros25.org/)
+[![Conference](https://img.shields.io/badge/Under%20Review-IROS%202025-blue)](http://iros25.org/)
 [![University](https://img.shields.io/badge/Institution-Seoul%20National%20University-red)](https://en.snu.ac.kr/)
 
 **Authors:** Mintaek Oh, Chan Kim and Seong-Woo Kim  
@@ -35,11 +35,11 @@ Our approach leverages Vision-Language Models (VLMs) to interpret the visual sce
 
 <div align="center">
   <a href="videos/LaC_video.mp4">
-    <img src="images/LaC_video.gif" width="100%" alt="Demo Video Thumbnail">
+    <img src="images/LaC_video.gif" width="100%" alt="Demo Video - Click to view full video">
   </a>
 </div>
 
-*Real-time generated Gaussian map using the proposed methodology. Potential risks are inferred from each image without direct experience, and an anxiety score is pre-computed using a VLM to update the cost of the map. The anxiety score determines how much the robot should avoid certain areas during navigation.*
+*Click on the GIF to view the full video. Real-time generated Gaussian map using the proposed methodology. Potential risks are inferred from each image without direct experience, and an anxiety score is pre-computed using a VLM to update the cost of the map. The anxiety score determines how much the robot should avoid certain areas during navigation.*
 
 ![Real-World Offline Data Map Building](images/ex.png)
 *Fig. 3: Real-World Offline Data Map Building. The first row displays the RGB images from the robot's perspective. The second row visualizes the cost map corresponding to the same viewpoint as the first row. The third row presents the bird's-eye view (BEV) of the Gaussian map being generated in real-time. (a) represents the cost visualization of the potential hazard associated with a door in the indoor environment. (b) shows the cost representation of the potential hazard when a person is seated on a chair in the indoor environment. (c) illustrates the cost representation of the potential hazard on a snowy surface.*
@@ -73,7 +73,7 @@ Our approach demonstrates significant improvements in navigation success rates a
 
 The implementation code will be made available upon acceptance of the paper.
 
-## Citation
+<!-- ## Citation
 
 If you find our work useful in your research, please consider citing:
 
@@ -85,7 +85,7 @@ If you find our work useful in your research, please consider citing:
   year={2025},
   note={Under Review}
 }
-```
+``` -->
 
 ## Contact
 
