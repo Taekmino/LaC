@@ -1,0 +1,27 @@
+services:
+  lac:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lac
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - DISPLAY=${DISPLAY}
+      # API keys — set these in your host environment or a .env file
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-false}
+      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY:-}
+      - LANGCHAIN_ENDPOINT=${LANGCHAIN_ENDPOINT:-}
+      - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-LaC}
+    volumes:
+      # Mount source code for live development
+      - ./src:/home/appuser/LaC/catkin_ws/src
+      # Mount bag files directory
+      - ./data:/home/appuser/LaC/catkin_ws/data
+      # X11 forwarding for GUI (optional)
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    network_mode: host
+    stdin_open: true
+    tty: true

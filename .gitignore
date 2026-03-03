@@ -1,0 +1,40 @@
+# Catkin build artifacts
+build/
+devel/
+logs/
+.catkin_workspace
+.catkin_tools/
+
+# ROS bag files (large data)
+*.bag
+
+# Environment and secrets
+.env
+*.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+*.egg
+
+# Model weights
+*.pth
+*.pt
+*.onnx
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test data directory
+data/

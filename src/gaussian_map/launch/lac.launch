@@ -1,0 +1,66 @@
+<launch>
+
+  <!-- ============================================================
+       VLM model selection
+       hazard_detection_model : Hazard Reasoner (GPT-4o class)
+       emotion_evaluator_model: Emotion Evaluator (GPT-4o-mini class)
+       ============================================================ -->
+  <arg name="hazard_detection_model"  default="gpt-4o-2024-11-20"/>
+  <arg name="emotion_evaluator_model" default="gpt-4o-mini"/>
+
+  <!-- ============================================================
+       Gaussian sigma parameters
+       sigma_method : 0 = fixed per-level, 1 = log-based
+       T_param      : denominator T for log-based method
+       sigma_k_1/2/3: base sigma for anxiety score 1 / 2 / 3
+       ============================================================ -->
+  <arg name="sigma_method" default="0"/>
+  <arg name="T_param"      default="1.0"/>
+  <arg name="sigma_k_1"    default="0.15"/>
+  <arg name="sigma_k_2"    default="0.20"/>
+  <arg name="sigma_k_3"    default="0.25"/>
+
+  <!-- ============================================================
+       Voxel map node (depth → local/global voxel cloud)
+       ============================================================ -->
+  <node pkg="gaussian_map" type="gaussian_map_node"
+        name="gaussian_map_node" output="screen"/>
+
+  <!-- ============================================================
+       Gaussian anxiety cost map + obstacle map fusion node
+       ============================================================ -->
+  <node pkg="gaussian_map" type="cost_map" name="cost_map" output="screen">
+    <param name="sigma_method" value="$(arg sigma_method)"/>
+    <param name="T_param"      value="$(arg T_param)"/>
+    <param name="sigma_k_1"    value="$(arg sigma_k_1)"/>
+    <param name="sigma_k_2"    value="$(arg sigma_k_2)"/>
+    <param name="sigma_k_3"    value="$(arg sigma_k_3)"/>
+  </node>
+
+  <!-- ============================================================
+       VLM hazard detection + emotion scoring node
+       ============================================================ -->
+  <node pkg="vlm_pipeline" type="hazard_detection.py"
+        name="hazard_detection" output="screen">
+    <param name="hazard_detection_model"  value="$(arg hazard_detection_model)"/>
+    <param name="emotion_evaluator_model" value="$(arg emotion_evaluator_model)"/>
+  </node>
+
+  <!-- ============================================================
+       Grounded-EdgeSAM segmentation node
+       GroundingDINO's _C CUDA extension requires torch libs on LD_LIBRARY_PATH;
+       roslaunch may strip the system ldconfig path, so we set it explicitly.
+       ============================================================ -->
+  <node pkg="vlm_pipeline" type="grounded_sam_node.py"
+        name="grounded_segmentation" output="screen">
+    <env name="LD_LIBRARY_PATH"
+         value="/usr/local/lib/python3.8/dist-packages/torch/lib:$(optenv LD_LIBRARY_PATH)"/>
+  </node>
+
+  <!-- ============================================================
+       RViz with project config
+       ============================================================ -->
+  <node pkg="rviz" type="rviz" name="rviz" output="screen"
+        args="-d $(find gaussian_map)/lac.rviz"/>
+
+</launch>

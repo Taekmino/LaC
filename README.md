@@ -1,37 +1,12 @@
 # Language as Cost: Proactive Hazard Mapping using VLM for Robot Navigation
 
-[![Conference](https://img.shields.io/badge/Under%20Review-IROS%202025-blue)](http://iros25.org/)
+[![Conference](https://img.shields.io/badge/IROS-2025-blue)](http://iros25.org/)
 [![University](https://img.shields.io/badge/Institution-Seoul%20National%20University-red)](https://en.snu.ac.kr/)
 
-**Authors:** Mintaek Oh, Chan Kim and Seong-Woo Kim  
+**Authors:** Mintaek Oh, Chan Kim, Seung-Woo Seo and Seong-Woo Kim  
 **Affiliation:** Seoul National University
 
-## Abstract
-
-Robots operating in human-centric or hazardous environments must proactively anticipate and mitigate dangers beyond basic obstacle detection. Traditional navigation systems often depend on static maps, which struggle to account for dynamic risks, such as a person emerging from a suddenly opened door. As a result, these systems tend to be reactive rather than anticipatory when handling dynamic hazards.
-
-Recent advancements in pre-trained large language models and vision-language models (VLMs) present new opportunities for proactive hazard avoidance. In this work, we propose a zero-shot language-as-cost mapping framework that leverages VLMs to interpret visual scenes, assess potential dynamic risks, and assign risk-aware navigation costs preemptively, enabling robots to anticipate hazards before they materialize.
-
-By integrating this language-based cost map with a geometric obstacle map, the robot not only identifies existing obstacles but also anticipates and proactively plans around potential hazards arising from environmental dynamics. Experiments in simulated and diverse dynamic environments demonstrate that the proposed method significantly improves navigation success rates and reduces hazard encounters compared to reactive baseline planners.
-
-## System Architecture
-
-Our system architecture consists of two main components: the hazard reasoning module and the cost map generation module.
-
-![System Architecture](images/arch.png)
-*Fig. 1: System architecture. (a) The hazard reasoner describes the scene from the robot's viewpoint, identifying potentially hazardous situations and objects. The emotion evaluator then computes the anxiety score of hazardous objects based on the hazard reasoner's output and the robot's viewpoint image. (b) A real-time Gaussian map is generated to reflect potential hazards. The hazardous objects identified by the hazard reasoner are segmented using a zero-shot segmentation model to extract masks, which are combined with the anxiety scores to create an anxiety score map. This map is then integrated with the obstacle map to generate the Gaussian cost map.*
-
-## VLM Processing Pipeline
-
-Our approach leverages Vision-Language Models (VLMs) to interpret the visual scene and assess potential hazards:
-
-![VLM Processes](images/VLMs.png)
-*Fig. 2: Each top box is the VLM's input, and the bottom box is the output. The orange box represents the VLM's system prompt. The blue box is the output of (a) hazard reasoner, and the green box is the output of (b) emotion evaluator. All outputs are in JSON format.*
-
-
-## Results
-
-### Offline Dataset
+## Demo Video
 
 <div align="center">
   <a href="videos/LaC_video.mp4">
@@ -39,53 +14,270 @@ Our approach leverages Vision-Language Models (VLMs) to interpret the visual sce
   </a>
 </div>
 
-*Click on the GIF to view the full video. Real-time generated Gaussian map using the proposed methodology. Potential risks are inferred from each image without direct experience, and an anxiety score is pre-computed using a VLM to update the cost of the map. The anxiety score determines how much the robot should avoid certain areas during navigation.*
+*Click on the GIF to view the full video.*
 
-![Real-World Offline Data Map Building](images/ex.png)
-*Fig. 3: Real-World Offline Data Map Building. The first row displays the RGB images from the robot's perspective. The second row visualizes the cost map corresponding to the same viewpoint as the first row. The third row presents the bird's-eye view (BEV) of the Gaussian map being generated in real-time. (a) represents the cost visualization of the potential hazard associated with a door in the indoor environment. (b) shows the cost representation of the potential hazard when a person is seated on a chair in the indoor environment. (c) illustrates the cost representation of the potential hazard on a snowy surface.*
+LaC is a **hazard-aware robot navigation** pipeline that converts **natural-language risk understanding** into a **real-time traversability cost map**. It uses **Vision-Language Models (VLMs)** to reason about hazards, assigns **anxiety scores** to hazardous objects, localizes them with **zero-shot segmentation**, and builds a **Gaussian cost map** fused with an obstacle map for safer path planning.
 
-Our approach successfully identifies potential hazards and generates appropriate cost maps to guide robot navigation.
+## Key Idea
+
+Instead of treating the world as only *free space vs. obstacles*, LaC models **hazard severity** and its **spatial influence** as a continuous cost field derived from language-based reasoning—so the robot can proactively avoid risky areas (e.g., wet floors, doors that may open, narrow passages near humans) even when they are not strict obstacles.
+
+## System Overview
+
+![System Architecture](images/arch.png)
+
+### 1) Hazard Reasoner (VLM)
+- Input: robot RGB view image `I_t` + hazard reasoning prompt `p_hd`
+- Output: structured JSON `J_t` containing:
+  - scene description
+  - object list
+  - hazard reasoning `R_t`
+  - hazardous objects list `L_t`
+
+### 2) Emotion Evaluator (VLM)
+- Input: hazard reasoning `R_t`, hazardous object list `L_t`, image `I_t`, system prompt `p_ee`
+- Output: anxiety score per hazard object (scale **1–3**)
+  - higher score → higher cost around the object and wider Gaussian spread
+
+### 3) Language-based Zero-shot Segmentation
+- Model: **Grounded Edge SAM**
+- Input: current RGB image `I_{t+k}` + latest hazard list `L_t`
+- Output: hazard masks `M_{t+k}` at higher frequency than VLM inference (keeps localization responsive)
+
+### 4) Anxiety Score Map → Gaussian Cost Map
+- Combine hazard masks with depth to project hazards into a **top-down grid**
+- Build an initial **anxiety score map** with discrete scores `{0,1,2,3}`
+- Propagate each hazard cell to neighbors with a **2D Gaussian**
+  - anxiety affects covariance (higher anxiety → broader influence)
+
+### 5) Max-fusion with Obstacle Map
+- Fuse the continuous hazard cost map with the obstacle/occupancy map using **max**
+- Output: final navigation cost map `M_Gaussian ∈ [0, 1]`
+  - `1` indicates impassable (obstacle or extremely risky)
+  - lower values indicate lower risk
+
+## VLM Processing Pipeline
+
+Our approach leverages Vision-Language Models (VLMs) to interpret the visual scene and assess potential hazards. The prompts used for the Hazard Reasoner and Emotion Evaluator can be found in `src/vlm_pipeline/prompt`:
+
+![VLM Processes](images/VLMs.png)
+
+## Features
+
+- **Proactive hazard avoidance** beyond geometric obstacles
+- **Severity-aware continuous costs** via Gaussian propagation
+- **Real-time operation** with asynchronous VLM reasoning + fast segmentation updates
+- **Interpretable outputs** (structured JSON + explicit hazard reasoning)
+- **Planner-friendly output**: a standard grid cost map in `[0,1]`
+
+## Requirements
+
+- **ROS**: ROS1 Noetic (Ubuntu 20.04)
+- **GPU**: NVIDIA GPU with CUDA support (for GroundingDINO and EdgeSAM)
+- **Docker**: Docker with NVIDIA Container Runtime
+- **API Key**: OpenAI API key for VLM inference
+
+## Components
+
+- **Hazard Reasoner**: GPT-4o
+- **Emotion Evaluator**: GPT-4o-mini
+- **Zero-shot Segmentation**: Grounded Edge SAM
+- **Obstacle Mapping**: depth-based obstacle map or SLAM occupancy grid
+- **Gaussian Map Builder**: anxiety-based Gaussian diffusion + max-fusion
+
+## Output
+
+A **Gaussian hazard cost map** `M_Gaussian ∈ [0,1]` that can be directly used by navigation stacks as a risk-aware cost layer.
+
+## System Architecture
+
+```
+RGB Image
+    |
+    v
+[Hazard Reasoner]  (GPT-4o)
+    |
+    +--> Hazardous objects + Hazard reasoning
+    |
+    v
+[Emotion Evaluator]  (GPT-4o-mini)
+    |
+    +--> Anxiety scores (1-3 per object)
+    |
+    v
+[Grounded-Edge-SAM]  (GroundingDINO + EdgeSAM)
+    |
+    +--> Segmentation masks with anxiety encoding
+    |
+    v
+[Gaussian Map Builder]  (C++ node)
+    |
+    +--> Obstacle map (from depth)
+    +--> Anxiety cost map (from segmentation + depth)
+    +--> Final fused occupancy grid (max-fusion)
+```
+
+## Prerequisites
+
+- Docker with NVIDIA GPU support
+- An OpenAI API key (for GPT-4o and GPT-4o-mini)
+
+## Installation
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/Taekmino/LaC.git
+cd LaC/catkin_ws
+```
+
+### 2. Set Up Environment Variables
+
+Create a `.env` file in the repository root (this file is git-ignored):
+
+```bash
+# .env
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Optional: LangChain tracing
+LANGCHAIN_TRACING_V2=false
+LANGCHAIN_API_KEY=
+LANGCHAIN_ENDPOINT=
+LANGCHAIN_PROJECT=LaC
+```
+
+### 3. Build the Docker Image
+
+The Dockerfile automatically clones and installs [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO) and [EdgeSAM](https://github.com/chongzhou96/EdgeSAM), and downloads the GroundingDINO model weights.
+
+```bash
+docker compose build
+```
 
 
-## Simulation Experiment
+### 4. Download the Test Bag File
 
-### Experimental Scenarios
+Download the test bag file and place it in the `data/` directory:
 
-We evaluated our approach in three different scenarios to demonstrate its effectiveness in various environments:
+```bash
+mkdir -p data
+# Download from: https://drive.google.com/file/d/1V9JZOzCJMVTRNB7uSxyoCbiISyHy9b43/view?usp=drive_link
+# Place the file as: data/test.bag
+```
 
-<div align="center">
-  <img src="images/danger_sign.png" width="30%" alt="Danger Sign Scenario">
-  <img src="images/dynamic_door.png" width="30%" alt="Dynamic Door Scenario">
-  <img src="images/seated_chair.png" width="30%" alt="Seated Chair Scenario">
-</div>
+## Running
 
-*Fig. 4: Three experimental scenarios: (left) danger sign scenario, (middle) dynamic door scenario, and (right) seated chair scenario.*
-Our approach demonstrates significant improvements in navigation success rates and hazard avoidance compared to baseline methods:
+### Start the Docker Container
 
-![Quantitative Results](images/quantitative_results.png)
-*Fig. 5: Quantitative Results in Simulated Environment.*
+```bash
+docker compose up -d
+docker compose exec lac bash
+```
 
-![Qualitative Results](images/qualitative.png)
-*Fig. 6: Qualitative result of the seated chair scenario. The robot inferred the chair with a seated person as a potential hazardous object and added costs to the surrounding area, allowing it to navigate safely without collisions.*
+### Inside the Container
+
+**Terminal 1** Launch all nodes:
+
+```bash
+source /home/appuser/LaC/catkin_ws/devel/setup.bash
+roslaunch gaussian_map lac.launch
+```
+
+**Terminal 2** — Play the test bag file:
+
+```bash
+rosbag play /home/appuser/LaC/catkin_ws/data/test.bag
+```
+
+RViz launches automatically with the project config. To visualize the cost map, disable the **PointCloud2** display and enable the **Map (final_cost_grid)** display in the Displays panel.
+
+## Integration
+
+To use the LaC cost map on a robot, subscribe to:
+
+| Topic | Type | Description |
+|-------|------|-------------|
+| `/cost_map/final_cost_grid` | `nav_msgs/OccupancyGrid` | Gaussian-spread anxiety cost map fused with obstacle map. Cell values: `0` = free, `1–99` = anxiety cost, `100` = obstacle. Pass directly to a navigation planner as a static or rolling layer. |
+
+## Configuration
+
+### Launch File Arguments
+
+Edit `lac.launch` or pass as command-line arguments:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `hazard_detection_model` | `gpt-4o-2024-11-20` | VLM model for hazard reasoning |
+| `emotion_evaluator_model` | `gpt-4o-mini` | VLM model for emotion evaluation |
+| `sigma_method` | `0` | Gaussian sigma calculation: 0 = fixed per-level, 1 = log-based |
+| `T_param` | `1.0` | Denominator T for log-based sigma method |
+| `sigma_k_1` | `0.15` | Base Gaussian sigma for anxiety score 1 (m) |
+| `sigma_k_2` | `0.20` | Base Gaussian sigma for anxiety score 2 (m) |
+| `sigma_k_3` | `0.25` | Base Gaussian sigma for anxiety score 3 (m) |
+
+### Cost Map Node Parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `z_max_threshold` | 1.3 | Maximum z-height for obstacle detection (m) |
+| `z_min_threshold` | -0.1 | Minimum z-height for obstacle detection (m) |
+| `max_cost_depth_threshold` | 3.3 | Maximum depth for cost map generation (m) |
+| `grid_resolution` | 0.05 | Grid cell size (m) |
+| `sliding_window_size` | 4 | Number of frames for temporal consistency |
+| `depth_factor` | 1000.0 | Depth image scale factor (mm to m) |
 
 
-## Code
+## Project Structure
 
-The implementation code will be made available upon acceptance of the paper.
+```
+catkin_ws/
+├── Dockerfile
+├── docker-compose.yml
+├── README.md
+├── .gitignore
+├── videos/
+├── images/
+├── data/                          # Place test.bag here (git-ignored)
+└── src/
+    ├── gaussian_map/              # C++ package: depth processing and mapping
+    │   ├── CMakeLists.txt
+    │   ├── package.xml
+    │   ├── launch/
+    │   │   ├── lac.launch         # Main launch file (all nodes)
+    │   └── src/
+    │       ├── cost_map.cpp       # 2D obstacle + Gaussian cost map
+    │       ├── depth_rgb_map_node.cpp  # 3D voxel RGB-D mapping
+    └── vlm_pipeline/              # Python package: VLM + segmentation
+        ├── CMakeLists.txt
+        ├── package.xml
+        ├── scripts/
+        │   ├── hazard_detection.py    # VLM hazard reasoning + emotion evaluation
+        │   └── grounded_sam_node.py   # GroundingDINO + EdgeSAM segmentation
+        └── prompt/
+            ├── hd_system_prompt_template.txt
+            ├── hd_user_prompt.txt
+            ├── ee_system_prompt_template.txt
+            └── ee_user_prompt.txt
+```
 
-<!-- ## Citation
+## Citation
 
-If you find our work useful in your research, please consider citing:
+If you use this work in your research, please cite:
 
 ```bibtex
 @inproceedings{oh2025language,
   title={Language as Cost: Proactive Hazard Mapping using VLM for Robot Navigation},
-  author={Oh, Mintaek and Kim, Chan and Kim, Seong-Woo},
-  booktitle={IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)},
+  author={Oh, Mintaek and Kim, Chan and Seo, Seung-Woo and Kim, Seong-Woo},
+  booktitle={2025 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)},
+  pages={21543--21550},
   year={2025},
-  note={Under Review}
+  organization={IEEE}
 }
-``` -->
+```
+
+## License
+
+This project is licensed under the MIT License.
 
 ## Contact
 
